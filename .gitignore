@@ -6,3 +6,5 @@ Cargo.lock
 .vscode/launch.json
 
 .vscode/
+
+.env

@@ -9,13 +9,16 @@ use warp::{
     http::StatusCode
 };
 
+use sqlx::error::Error as SqlxError;
+
 #[derive(Debug)]
 pub enum Error {
 ParseError(std::num::ParseIntError),
 MissingParameters,
 ItemNotFound,
 StartGreaterThanEnd,
-EndParamExceedsItemList
+EndParamExceedsItemList,
+DatabaseQueryError(SqlxError),
 }
 
 impl std::fmt::Display for Error {
@@ -27,7 +30,10 @@ fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         Error::MissingParameters => write!(f, "Missing parameter"),
         Error::ItemNotFound => write!(f, "Item not found"),
         Error::EndParamExceedsItemList => write!(f, "End parameter exceeds item list length"),
-        Error::StartGreaterThanEnd => write!(f, "Start cannot be greater than end parameter")
+        Error::StartGreaterThanEnd => write!(f, "Start cannot be greater than end parameter"),
+        Error::DatabaseQueryError(ref e) => {
+            write!(f, "Database query error {}", e)
+        }
     }
 }
 }

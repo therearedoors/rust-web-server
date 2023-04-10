@@ -3,18 +3,23 @@
 use handle_errors::return_error;
 use warp::{http::Method, Filter};
 use tracing_subscriber::fmt::format::FmtSpan;
+use dotenv::dotenv;
 mod routes;
 mod store;
 mod types;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), sqlx::Error> {
+    dotenv().ok();
+    let postgres_user = std::env::var("POSTGRES_USER").expect("POSTGRES_USER must be set");
+    let postgres_password = std::env::var("POSTGRES_PASSWORD").expect("POSTGRES_PASSWORD must be set");
+
     let log_filter = std::env::var("RUST_LOG")
     .unwrap_or_else(|_|
     "web_server=info,warp=error".to_owned()
     );
 
-    let store = store::Store::new();
+    let store = store::Store::new(&format!("postgresql://{}:{}@localhost:5432/rust-web-dev",postgres_user, postgres_password)).await;
     let store_filter = warp::any().map(move || store.clone());
 
     tracing_subscriber::fmt()
@@ -65,7 +70,7 @@ async fn main() {
 
     let update_question = warp::put()
         .and(warp::path("questions"))
-        .and(warp::path::param::<String>())
+        .and(warp::path::param::<i32>())
         .and(warp::path::end())
         .and(store_filter.clone())
         .and(warp::body::json())
@@ -73,7 +78,7 @@ async fn main() {
 
     let delete_question = warp::delete()
         .and(warp::path("questions"))
-        .and(warp::path::param::<String>())
+        .and(warp::path::param::<i32>())
         .and(store_filter.clone())
         .and_then(routes::question::delete_question);
 
@@ -97,4 +102,5 @@ async fn main() {
     warp::serve(routes)
         .run(([127, 0, 0, 1], 3030))
         .await;
+    Ok(())
 }
